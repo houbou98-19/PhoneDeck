@@ -1,0 +1,16 @@
+# Local-only notes (copy manually between machines)
+CLAUDE.md
+docs/decisions.md
+
+# Python
+.venv/
+__pycache__/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Secrets (never commit keys)
+*.key
+*.pem
+.env
