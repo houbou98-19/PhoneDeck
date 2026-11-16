@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 PROTOCOL_VERSION = 1
 HEADER_SIZE = 4  # version (1) + message type (1) + payload length (2), big-endian
-MAX_PAYLOAD_SIZE = 512
+MAX_PAYLOAD_SIZE = 508
+MAX_FRAME_SIZE = HEADER_SIZE + MAX_PAYLOAD_SIZE  # 512: the largest value a BLE GATT write can hold
 
 
 class FrameError(Exception):

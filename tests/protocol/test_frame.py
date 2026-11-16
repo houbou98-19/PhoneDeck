@@ -11,6 +11,7 @@ import pytest
 
 from phonedeck.protocol.frame import (
     HEADER_SIZE,
+    MAX_FRAME_SIZE,
     MAX_PAYLOAD_SIZE,
     PROTOCOL_VERSION,
     Frame,
@@ -32,6 +33,13 @@ def test_decode_reads_expected_bytes() -> None:
     frame = decode_frame(b"\x01\x02\x00\x02hi")
 
     assert frame == Frame(version=1, message_type=2, payload=b"hi")
+
+
+def test_largest_frame_fits_in_one_ble_write() -> None:
+    # A BLE GATT value holds at most 512 bytes, so the largest frame must not exceed that.
+    frame = Frame(PROTOCOL_VERSION, 0, b"x" * MAX_PAYLOAD_SIZE)
+
+    assert len(encode_frame(frame)) == MAX_FRAME_SIZE == 512
 
 
 def test_length_field_is_big_endian() -> None:
@@ -80,7 +88,10 @@ def test_round_trip_message_type_limits(message_type: int) -> None:
         (b"\x01\x02\x00\x05hi", "length says 5 but only 2 payload bytes follow"),
         (b"\x01\x02\x00\x01hi", "length says 1 but 2 payload bytes follow (trailing data)"),
         (b"\x01\x02\xff\xff", "length far larger than the allowed maximum"),
-        (b"\x01\x02\x02\x01" + b"x" * 513, "length one above MAX_PAYLOAD_SIZE"),
+        (
+            b"\x01\x02" + (MAX_PAYLOAD_SIZE + 1).to_bytes(2, "big") + b"x" * (MAX_PAYLOAD_SIZE + 1),
+            "length one above MAX_PAYLOAD_SIZE",
+        ),
     ],
 )
 def test_decode_rejects_invalid_input(data: bytes, why: str) -> None:
