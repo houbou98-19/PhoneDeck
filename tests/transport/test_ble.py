@@ -15,11 +15,7 @@ from phonedeck.core.channel import MessageChannel
 from phonedeck.protocol.frame import MAX_FRAME_SIZE, encode_frame
 from phonedeck.protocol.message import Message, MessageKind, message_to_frame
 from phonedeck.transport.base import TransportClosedError, TransportError
-from phonedeck.transport.ble import (
-    NOTIFY_CHARACTERISTIC_UUID,
-    WRITE_CHARACTERISTIC_UUID,
-    BleTransport,
-)
+from phonedeck.transport.ble import BleTransport
 
 
 def run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
@@ -67,15 +63,6 @@ class FakePeripheral:
 def make_transport(max_packet_size: int = MAX_FRAME_SIZE) -> tuple[BleTransport, FakePeripheral]:
     peripheral = FakePeripheral()
     return BleTransport(peripheral, max_packet_size), peripheral
-
-
-# --- The characteristic UUIDs are part of the protocol (the web page uses the same ones). ---
-# The service UUID is not fixed: every installation has its own.
-
-
-def test_the_characteristic_uuids_are_fixed() -> None:
-    assert WRITE_CHARACTERISTIC_UUID == "7d2a0002-8c1e-4b6f-9a3d-5e1f0c2b4a10"
-    assert NOTIFY_CHARACTERISTIC_UUID == "7d2a0003-8c1e-4b6f-9a3d-5e1f0c2b4a10"
 
 
 # --- Size. ---

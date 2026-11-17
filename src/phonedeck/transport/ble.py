@@ -1,24 +1,32 @@
 """A Transport over BLE, for the PC acting as a peripheral (GATT server).
 
 Two characteristics carry the traffic (like two URL paths on one server):
-  * the phone WRITES requests to WRITE_CHARACTERISTIC_UUID   (like POST)
-  * the PC NOTIFIES responses on NOTIFY_CHARACTERISTIC_UUID  (like a WebSocket push)
+  * the phone WRITES requests to the write characteristic   (like POST)
+  * the PC NOTIFIES responses on the notify characteristic  (like a WebSocket push)
 
 This module has no Windows code. The part that talks to the operating system hides behind
 BlePeripheral.
 """
 
 import asyncio.queues
+import uuid
 from collections.abc import Callable
 from typing import Protocol
 
 from phonedeck.protocol.frame import MAX_FRAME_SIZE
 from phonedeck.transport.base import TransportClosedError, TransportError
 
-# These values are part of the protocol: the phone's web page needs the same ones.
-# The SERVICE UUID is not here: it is different for every installation (see core/identity.py).
-WRITE_CHARACTERISTIC_UUID = "7d2a0002-8c1e-4b6f-9a3d-5e1f0c2b4a10"
-NOTIFY_CHARACTERISTIC_UUID = "7d2a0003-8c1e-4b6f-9a3d-5e1f0c2b4a10"
+
+def write_characteristic_uuid(service_uuid: str) -> str:
+    """UUID of the characteristic the phone WRITES requests to, for this service."""
+    uuid_obj = uuid.UUID(service_uuid)
+    return str(uuid.uuid5(uuid_obj, "write"))
+
+
+def notify_characteristic_uuid(service_uuid: str) -> str:
+    """UUID of the characteristic the PC NOTIFIES responses on, for this service."""
+    uuid_obj = uuid.UUID(service_uuid)
+    return str(uuid.uuid5(uuid_obj, "notify"))
 
 
 class BlePeripheral(Protocol):
