@@ -11,8 +11,6 @@ class InMemoryTransport:
     """One end of a pair of connected in-memory transports.
 
     Make a connected pair with create_pair(). What one end sends, the other end receives.
-
-    TODO(you): decide what an end needs to remember (hint: asyncio.Queue is a good fit).
     """
 
     def __init__(self, max_packet_size: int):
