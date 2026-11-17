@@ -45,14 +45,28 @@ class Handler:
         name = request.body
         if kind == MessageKind.QUERY:
             if name == b"cpu":
-                percent = self._system.cpu_percent()
+                try:
+                    percent = self._system.cpu_percent()
+                except SystemControlError:
+                    return Message(
+                        MessageKind.RESPONSE,
+                        request_id=request.request_id,
+                        body=bytes([ResponseStatus.FAILED]),
+                    )
                 return Message(
                     MessageKind.RESPONSE,
                     request_id=request.request_id,
                     body=bytes([ResponseStatus.OK, percent]),
                 )
             elif name == b"ram":
-                percent = self._system.ram_percent()
+                try:
+                    percent = self._system.ram_percent()
+                except SystemControlError:
+                    return Message(
+                        MessageKind.RESPONSE,
+                        request_id=request.request_id,
+                        body=bytes([ResponseStatus.FAILED]),
+                    )
                 return Message(
                     MessageKind.RESPONSE,
                     request_id=request.request_id,

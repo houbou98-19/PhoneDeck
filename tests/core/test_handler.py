@@ -13,16 +13,23 @@ from phonedeck.protocol.message import Message, MessageError, MessageKind
 class FakeSystem:
     """A computer that reports fixed values and remembers what it was asked to do."""
 
-    def __init__(self, cpu: int = 37, ram: int = 61, lock_fails: bool = False) -> None:
+    def __init__(
+        self, cpu: int = 37, ram: int = 61, lock_fails: bool = False, read_fails: bool = False
+    ) -> None:
         self._cpu = cpu
         self._ram = ram
         self._lock_fails = lock_fails
+        self._read_fails = read_fails
         self.lock_calls = 0
 
     def cpu_percent(self) -> int:
+        if self._read_fails:
+            raise SystemControlError("could not read the CPU")
         return self._cpu
 
     def ram_percent(self) -> int:
+        if self._read_fails:
+            raise SystemControlError("could not read the memory")
         return self._ram
 
     def lock_screen(self) -> None:
@@ -132,6 +139,14 @@ def test_odd_names_are_refused_not_crashed_on(name: bytes) -> None:
 
 def test_a_failing_computer_gives_status_failed() -> None:
     response = ask(Handler(FakeSystem(lock_fails=True)), MessageKind.COMMAND, b"lock")
+
+    assert response.kind == MessageKind.RESPONSE
+    assert response.body == bytes([ResponseStatus.FAILED])
+
+
+@pytest.mark.parametrize("name", [b"cpu", b"ram"])
+def test_a_query_that_cannot_be_read_gives_status_failed(name: bytes) -> None:
+    response = ask(Handler(FakeSystem(read_fails=True)), MessageKind.QUERY, name)
 
     assert response.kind == MessageKind.RESPONSE
     assert response.body == bytes([ResponseStatus.FAILED])
