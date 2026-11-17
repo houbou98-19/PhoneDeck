@@ -4,6 +4,8 @@ This is the only file that talks to the Windows Bluetooth stack. It can only be 
 real adapter, so it is kept small, and the logic lives in phonedeck.transport.ble instead.
 """
 
+import asyncio
+import logging
 import uuid
 from collections.abc import Callable
 
@@ -14,33 +16,19 @@ from winrt.windows.devices.bluetooth.genericattributeprofile import (
     GattLocalCharacteristicParameters,
     GattServiceProvider,
     GattServiceProviderAdvertisingParameters,
+    GattWriteOption,
+    GattWriteRequestedEventArgs,
 )
+from winrt.windows.foundation import Deferral
+from winrt.windows.storage.streams import DataWriter
 
 from phonedeck.transport.ble import notify_characteristic_uuid, write_characteristic_uuid
 
+log = logging.getLogger(__name__)
+
 
 class WinRtPeripheral:
-    """Advertises PhoneDeck's GATT service and moves bytes in and out of it.
-
-    The four steps (the spike in spikes/ble_peripheral.py does steps 1, 2 and 4):
-      1. Create the service, with service_uuid (different for every installation, so that PCs
-         running PhoneDeck cannot be told apart by their advertisement, see core/identity.py).
-      2. Add two characteristics:
-           WRITE_CHARACTERISTIC_UUID   properties WRITE (and WRITE_WITHOUT_RESPONSE)
-           NOTIFY_CHARACTERISTIC_UUID  properties NOTIFY
-      3. When the phone writes, read the bytes out of the request and give them to on_write.
-         When the phone has no subscribers left, call on_disconnect.
-      4. notify() sends the bytes to everyone subscribed to the notify characteristic.
-
-    Thread rule: WinRT calls your event handlers from another thread, but BlePeripheral says the
-    handlers must run on the asyncio loop's thread. So do not call on_write directly from
-    the WinRT handler. Hand it over with loop.call_soon_threadsafe(...).
-
-    Constructing the object must not touch Bluetooth. Only start() does.
-
-    TODO(you): decide what to remember (the loop, the handlers, the provider and the two
-    characteristics). Think about where you get the loop from.
-    """
+    """Advertises PhoneDeck's GATT service and moves bytes in and out of it."""
 
     def __init__(self, service_uuid: str) -> None:
         """Initialize the object, but do not touch Bluetooth yet. The service_uuid is a string"""
@@ -52,6 +40,8 @@ class WinRtPeripheral:
 
         self._write_characteristic: GattLocalCharacteristic | None = None
         self._notify_characteristic: GattLocalCharacteristic | None = None
+
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     def set_handlers(
         self, on_write: Callable[[bytes], None], on_disconnect: Callable[[], None]
@@ -83,6 +73,11 @@ class WinRtPeripheral:
         self._notify_characteristic = await self.create_characteristic(
             notify_characteristic_uuid(self._service_uuid), GattCharacteristicProperties.NOTIFY
         )
+
+        self._loop = asyncio.get_running_loop()
+        self._write_characteristic.add_write_requested(self._on_write_requested)
+        self._notify_characteristic.add_subscribed_clients_changed(self._on_subscribers_changed)
+
         if self._provider is not None:
             adv = GattServiceProviderAdvertisingParameters()
             adv.is_connectable = True
@@ -112,12 +107,47 @@ class WinRtPeripheral:
 
     async def notify(self, data: bytes) -> None:
         """Send one notification to the connected phone."""
-        raise NotImplementedError
+        if self._notify_characteristic is None:
+            raise RuntimeError("Notify characteristic not initialized. Call start() first.")
+        writer = DataWriter()
+        writer.write_bytes(data)
+        buffer = writer.detach_buffer()
+        await self._notify_characteristic.notify_value_async(buffer)
 
-    def _on_write(self, data: bytes) -> None:
-        """Windows says the phone wrote: call _write_handler, on the asyncio loop's thread."""
-        raise NotImplementedError
+    def _on_write_requested(
+        self, sender: GattLocalCharacteristic, args: GattWriteRequestedEventArgs
+    ) -> None:
+        """Windows says the phone wants to write: read the bytes and call _on_write."""
+        log.info(f"Write requested: {args}")
 
-    def _on_disconnect(self) -> None:
-        """Windows says the phone left: call _disconnect_handler, on the asyncio loop's thread."""
-        raise NotImplementedError
+        if self._loop is None:
+            raise RuntimeError("Event loop not initialized. Call start() first.")
+        deferral = args.get_deferral()
+        asyncio.run_coroutine_threadsafe(self._handle_write_request(args, deferral), self._loop)
+
+    def _on_subscribers_changed(self, sender: GattLocalCharacteristic, args: object) -> None:
+        """Windows says the phone subscribed or unsubscribed: if no subscribers, call
+        _on_disconnect."""
+
+        log.info(f"Subscribers changed: {args}")
+        if len(sender.subscribed_clients) == 0:
+            if self._loop is None:
+                raise RuntimeError("Event loop not initialized. Call start() first.")
+            self._loop.call_soon_threadsafe(self._disconnect_handler)
+
+    async def _handle_write_request(
+        self, args: GattWriteRequestedEventArgs, deferral: Deferral
+    ) -> None:
+        """Read the bytes from the write request and call _on_write."""
+        try:
+            request = await args.get_request_async()
+            data = bytes(request.value)
+            if request.option == GattWriteOption.WRITE_WITH_RESPONSE:
+                log.info("Write with response received: %r", data)
+                request.respond()
+
+            self._write_handler(data)
+        except Exception:
+            log.exception("Error handling write request")
+        finally:
+            deferral.complete()
