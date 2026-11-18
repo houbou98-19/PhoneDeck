@@ -1,8 +1,23 @@
 """MessageChannel: send and receive Messages over a Transport."""
 
+from typing import Protocol
+
 from phonedeck.protocol.frame import decode_frame, encode_frame
 from phonedeck.protocol.message import Message, frame_to_message, message_to_frame
 from phonedeck.transport.base import Transport
+
+
+class Channel(Protocol):
+    """Anything that can send and receive Messages: a MessageChannel, or a SecureChannel."""
+
+    async def send(self, message: Message) -> None:
+        """Send one message."""
+
+    async def receive(self) -> Message:
+        """Wait for the next message and return it."""
+
+    async def close(self) -> None:
+        """Close the channel."""
 
 
 class MessageChannel:
