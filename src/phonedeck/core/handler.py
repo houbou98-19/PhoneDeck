@@ -1,5 +1,6 @@
 """Handler: turns a request from the phone into a response, using the computer."""
 
+from collections.abc import Callable
 from enum import IntEnum
 
 from phonedeck.platform.base import SystemControl, SystemControlError
@@ -33,7 +34,14 @@ class Handler:
     """
 
     def __init__(self, system: SystemControl) -> None:
-        self._system = system
+        # The allowlist: a name the phone may send, and what it runs. Nothing else can run.
+        self._queries: dict[bytes, Callable[[], int]] = {
+            b"cpu": system.cpu_percent,
+            b"ram": system.ram_percent,
+        }
+        self._commands: dict[bytes, Callable[[], None]] = {
+            b"lock": system.lock_screen,
+        }
 
     def handle(self, request: Message) -> Message:
         """Answer one request.
@@ -41,63 +49,33 @@ class Handler:
         Raise MessageError if the request is not a COMMAND or a QUERY, since those are the
         only kinds the phone may ask with.
         """
-        kind = request.kind
         name = request.body
-        if kind == MessageKind.QUERY:
-            if name == b"cpu":
-                try:
-                    percent = self._system.cpu_percent()
-                except SystemControlError:
-                    return Message(
-                        MessageKind.RESPONSE,
-                        request_id=request.request_id,
-                        body=bytes([ResponseStatus.FAILED]),
-                    )
-                return Message(
-                    MessageKind.RESPONSE,
-                    request_id=request.request_id,
-                    body=bytes([ResponseStatus.OK, percent]),
-                )
-            elif name == b"ram":
-                try:
-                    percent = self._system.ram_percent()
-                except SystemControlError:
-                    return Message(
-                        MessageKind.RESPONSE,
-                        request_id=request.request_id,
-                        body=bytes([ResponseStatus.FAILED]),
-                    )
-                return Message(
-                    MessageKind.RESPONSE,
-                    request_id=request.request_id,
-                    body=bytes([ResponseStatus.OK, percent]),
-                )
-            else:
-                return Message(
-                    MessageKind.RESPONSE,
-                    request_id=request.request_id,
-                    body=bytes([ResponseStatus.UNKNOWN_ACTION]),
-                )
-        elif kind == MessageKind.COMMAND:
-            if name == b"lock":
-                try:
-                    self._system.lock_screen()
-                except SystemControlError:
-                    return Message(
-                        MessageKind.RESPONSE,
-                        request_id=request.request_id,
-                        body=bytes([ResponseStatus.FAILED]),
-                    )
-                return Message(
-                    MessageKind.RESPONSE,
-                    request_id=request.request_id,
-                    body=bytes([ResponseStatus.OK]),
-                )
-            else:
-                return Message(
-                    MessageKind.RESPONSE,
-                    request_id=request.request_id,
-                    body=bytes([ResponseStatus.UNKNOWN_ACTION]),
-                )
+        if request.kind == MessageKind.QUERY:
+            read = self._queries.get(name)
+            if read is None:
+                return self._respond(request, ResponseStatus.UNKNOWN_ACTION)
+            try:
+                percent = read()
+            except SystemControlError:
+                return self._respond(request, ResponseStatus.FAILED)
+            return self._respond(request, ResponseStatus.OK, bytes([percent]))
+        elif request.kind == MessageKind.COMMAND:
+            run = self._commands.get(name)
+            if run is None:
+                return self._respond(request, ResponseStatus.UNKNOWN_ACTION)
+            try:
+                run()
+            except SystemControlError:
+                return self._respond(request, ResponseStatus.FAILED)
+            return self._respond(request, ResponseStatus.OK)
         else:
-            raise MessageError(f"Unexpected message kind: {kind}")
+            raise MessageError(f"Unexpected message kind: {request.kind}")
+
+    @staticmethod
+    def _respond(request: Message, status: ResponseStatus, data: bytes = b"") -> Message:
+        """A RESPONSE to this request: the status byte, then the data."""
+        return Message(
+            MessageKind.RESPONSE,
+            request_id=request.request_id,
+            body=bytes([status]) + data,
+        )
