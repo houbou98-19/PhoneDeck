@@ -1,11 +1,7 @@
-"""A Transport over BLE, for the PC acting as a peripheral (GATT server).
+"""A Transport over BLE, with the PC as the peripheral (GATT server).
 
-Two characteristics carry the traffic (like two URL paths on one server):
-  * the phone WRITES requests to the write characteristic   (like POST)
-  * the PC NOTIFIES responses on the notify characteristic  (like a WebSocket push)
-
-This module has no Windows code. The part that talks to the operating system hides behind
-BlePeripheral.
+The phone writes requests to one characteristic, and the PC notifies responses on another.
+The operating-system side is behind BlePeripheral, so this module has no Windows code.
 """
 
 import asyncio.queues
@@ -30,19 +26,12 @@ def notify_characteristic_uuid(service_uuid: str) -> str:
 
 
 class BlePeripheral(Protocol):
-    """The operating-system side of BLE: advertise, receive writes, send notifications.
-
-    A real Windows implementation and a fake for tests both satisfy this interface.
-    """
+    """The operating-system side of BLE: advertise, receive writes, send notifications."""
 
     def set_handlers(
         self, on_write: Callable[[bytes], None], on_disconnect: Callable[[], None]
     ) -> None:
-        """Say what to call when the phone writes a packet, and when the phone disconnects.
-
-        Both handlers must be called on the asyncio event loop's own thread. If the operating
-        system calls from another thread, the implementation has to hand the call over.
-        """
+        """Both handlers must be called on the event loop's thread, not on the OS's."""
 
     async def start(self) -> None:
         """Start advertising, so the phone can find and connect to the PC."""
@@ -55,20 +44,12 @@ class BlePeripheral(Protocol):
 
 
 class BleTransport:
-    """Moves packets between the PC and one phone, through a BlePeripheral.
+    """Moves packets between the PC and one phone. One write or notification is one packet.
 
-    Behaviour (the tests pin all of it):
-      * send(): one call is one notification. Too large -> TransportError, nothing is sent.
-      * receive(): one phone write is one packet. Packets keep their order and boundaries.
-      * If the phone disconnects, packets already written can still be received first, then
-        receive() raises TransportClosedError. send() raises it straight away.
-      * close() stops the peripheral (only once, closing twice is fine). It also wakes up a
-        receive() that is waiting. After close(), send() and receive() raise
-        TransportClosedError, and any later write from the phone is ignored.
+    If the phone disconnects, packets it already wrote can still be received first.
     """
 
     def __init__(self, peripheral: BlePeripheral, max_packet_size: int = MAX_FRAME_SIZE) -> None:
-        """Remember the peripheral and register this transport's handlers with it."""
         self._peripheral = peripheral
         self._max_packet_size = max_packet_size
         self._closed = False

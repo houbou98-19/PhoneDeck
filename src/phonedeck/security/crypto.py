@@ -1,18 +1,6 @@
-"""The cryptographic building blocks of the handshake. Pure functions, no I/O, no state.
+"""The cryptography of the handshake: HKDF and AES-GCM from the `cryptography` library.
 
-How the pieces fit together (the design is in docs/decisions.md):
-
-  * The computer makes a random PAIRING KEY and shows it in a QR code. The phone scans it. The
-    key never travels over Bluetooth.
-  * Each side makes a random NONCE and sends it in the clear in the handshake.
-  * Both sides run derive_session_keys(pairing_key, client_nonce, server_nonce) and get the
-    same two session keys, one for each direction.
-  * Every later message is sealed with AES-GCM under the key of its direction. The message
-    kind and request id are not hidden, but they are "additional authenticated data": if
-    anyone changes them, opening the message fails.
-
-Nothing here is invented. It only calls the vetted `cryptography` library (HKDF and AES-GCM),
-and the phone's web page does the same with the browser's WebCrypto.
+Pure functions, no I/O, no state. See docs/protocol.md for how they are used.
 """
 
 import secrets
@@ -47,12 +35,12 @@ class SessionKeys:
 
 
 def new_pairing_key() -> bytes:
-    """A fresh random pairing key, PAIRING_KEY_SIZE bytes. Hint: secrets.token_bytes."""
+    """A fresh random pairing key."""
     return secrets.token_bytes(PAIRING_KEY_SIZE)
 
 
 def new_nonce() -> bytes:
-    """A fresh random nonce, NONCE_SIZE bytes."""
+    """A fresh random nonce."""
     return secrets.token_bytes(NONCE_SIZE)
 
 

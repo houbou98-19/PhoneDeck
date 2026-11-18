@@ -13,14 +13,9 @@ log = logging.getLogger(__name__)
 
 
 async def pair_and_serve(channel: SecureChannel, pairing: Pairing, handler: Handler) -> bool:
-    """Wait for a phone to pair, then answer its requests until it disconnects.
+    """Wait for a phone to pair within the time the pairing has left, then serve it.
 
-    The phone has as much time as the pairing has left (60 seconds from when it was made) to
-    connect AND finish the handshake. If the time runs out, the handshake fails, or the phone
-    leaves, the channel is closed and the answer is False: nobody was served. The caller makes
-    a new Pairing (a new key) for the next try.
-
-    If the phone paired, it is served until it disconnects, and the answer is True.
+    Return whether a phone was served. After a failed try the caller makes a new Pairing.
     """
     try:
         async with asyncio.timeout(pairing.seconds_left):

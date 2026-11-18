@@ -1,8 +1,4 @@
-"""The Transport interface.
-
-A transport moves whole packets between two ends, and keeps their boundaries:
-one send() on one end is exactly one receive() on the other end.
-"""
+"""The Transport interface: whole packets between two ends, one send() is one receive()."""
 
 from typing import Protocol
 

@@ -13,21 +13,9 @@ log = logging.getLogger(__name__)
 
 
 async def serve(channel: Channel, handler: Handler) -> None:
-    """Answer requests from the phone, one at a time, until the session ends.
+    """Answer requests one at a time, until the transport closes or a message is not trusted.
 
-    For every message that arrives: let the handler answer it, and send the answer back.
-    The channel is normally a SecureChannel, so only authentic messages get this far.
-
-    What must NOT stop the server (log it as a warning and carry on with the next message):
-      * garbage bytes (FrameError) and unknown message kinds (MessageError) from the phone;
-      * a message the phone may not send, like a RESPONSE (the handler raises MessageError).
-        No answer is sent for those.
-
-    The server ends, by returning normally, when
-      * the transport closes (TransportClosedError), whether while receiving or while sending;
-      * a message cannot be trusted (SecureChannelError). The secure channel has then already
-        closed the connection, and nothing was handled.
-    Other errors are not hidden.
+    Garbage and messages the phone may not send are logged and skipped, and get no answer.
     """
     while True:
         try:

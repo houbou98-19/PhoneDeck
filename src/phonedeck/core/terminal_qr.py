@@ -1,10 +1,8 @@
-"""The QR code as text for a terminal: black on white, whatever colour theme the terminal has.
+"""The QR code as text for a terminal, drawn black on white whatever the terminal's theme.
 
-A plain text QR code goes wrong in a dark terminal: the dark and light squares swap places, and
-many cameras cannot read that. So every square is drawn with explicit colour codes (ANSI): black
-and bright white. Two rows of the code fit in one line of text (the "upper half block" character
-has the top square as its text colour, and the bottom square as its background), so the code is
-as wide as it is tall on screen, and takes half as many lines.
+In a dark terminal a plain text QR code is inverted, which many cameras cannot read. Each text
+line holds two rows of squares: an upper half block, with the top square as its text colour and
+the bottom square as its background.
 """
 
 import segno
@@ -18,10 +16,7 @@ RESET = "\x1b[0m"
 
 
 def render_terminal_qr(link: str, border: int = 2) -> str:
-    """The QR code for this link, as lines of text with colour codes.
-
-    `border` is the empty (white) edge around the code, in squares.
-    """
+    """The QR code for this link as lines of text with ANSI colour codes."""
     matrix = segno.make(link, error="l").matrix
     size = len(matrix) + 2 * border
 

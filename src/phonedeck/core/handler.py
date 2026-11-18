@@ -26,31 +26,15 @@ def _awaitable[T](function: Callable[[], T]) -> Callable[[], Awaitable[T]]:
 
 
 class Handler:
-    """Answers COMMAND and QUERY messages.
+    """Answers COMMAND and QUERY messages. The actions are listed in docs/protocol.md.
 
-    The response body is | status (1 byte) | data (the rest) |, and it carries the same
-    request_id as the request.
-
-    Actions, by name (the name is the UTF-8 text in the request body):
-      QUERY    "cpu"   -> OK, data = 1 byte, percent 0-100
-      QUERY    "ram"   -> OK, data = 1 byte, percent 0-100
-      QUERY    "spotify" -> OK, data = 1 byte: 1 if Spotify runs, otherwise 0
-      COMMAND  "lock"  -> OK, no data
-      COMMAND  "spotify" -> OK, no data (Spotify is started, or brought up if it runs)
-      COMMAND  "media_play_pause", "media_next", "media_previous" -> OK, no data (done to
-               Spotify only, FAILED if Spotify is not there)
-    Anything else (unknown name, or a known name used with the wrong kind) gives
-    UNKNOWN_ACTION with no data, and does nothing. The phone never sends something that
-    is executed, it only picks a name from this list (an allowlist).
-
-    If the computer fails (SystemControlError) the status is FAILED with no data.
-
+    The phone only picks a name from an allowlist. An unknown name, or a known name with the
+    wrong kind, is refused and does nothing.
     """
 
     def __init__(self, system: SystemControl) -> None:
-        # The allowlist: a name the phone may send, and what it runs. Nothing else can run.
-        # Every entry can be awaited. The quick ones (plain functions) are wrapped by _awaitable,
-        # the ones that really wait for another program (media) are async already.
+        # The allowlist. Every entry is awaitable: quick functions are wrapped by _awaitable,
+        # the ones that wait for another program are async already.
         async def spotify_runs() -> bytes:
             return bytes([await system.spotify_running()])  # 1 if it runs, otherwise 0
 

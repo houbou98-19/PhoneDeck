@@ -21,30 +21,19 @@ class Channel(Protocol):
 
 
 class MessageChannel:
-    """Wraps a Transport so that callers deal in Messages, not bytes.
-
-    Sending:   Message -> Frame -> bytes -> Transport.send
-    Receiving: Transport.receive -> bytes -> Frame -> Message
-    """
+    """Wraps a Transport so that callers deal in Messages, not bytes."""
 
     def __init__(self, transport: Transport) -> None:
         self._transport = transport
 
     async def send(self, message: Message) -> None:
-        """Send one message.
-
-        Errors from the layers below (MessageError, FrameError, TransportError) are not hidden.
-        """
+        """Send one message. Errors from the layers below are not hidden."""
         frame = message_to_frame(message)
         encoded = encode_frame(frame)
         await self._transport.send(encoded)
 
     async def receive(self) -> Message:
-        """Wait for the next message and return it.
-
-        Raise FrameError or MessageError if the other end sent something invalid.
-        The channel stays usable afterwards: the next call reads the next packet.
-        """
+        """Wait for the next message. Invalid input raises, and the channel stays usable."""
         packet = await self._transport.receive()
         decoded_frame = decode_frame(packet)
         message = frame_to_message(decoded_frame)

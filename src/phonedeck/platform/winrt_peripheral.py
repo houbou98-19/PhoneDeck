@@ -1,7 +1,7 @@
 """BlePeripheral for Windows, built on WinRT (GattServiceProvider).
 
-This is the only file that talks to the Windows Bluetooth stack. It can only be tried with a
-real adapter, so it is kept small, and the logic lives in phonedeck.transport.ble instead.
+The only file that talks to the Windows Bluetooth stack. It needs a real adapter to be tried,
+so it is kept small and the logic lives in phonedeck.transport.ble.
 """
 
 import asyncio
@@ -31,7 +31,6 @@ class WinRtPeripheral:
     """Advertises PhoneDeck's GATT service and moves bytes in and out of it."""
 
     def __init__(self, service_uuid: str) -> None:
-        """Initialize the object, but do not touch Bluetooth yet. The service_uuid is a string"""
         self._service_uuid = service_uuid
         self._write_handler: Callable[[bytes], None] = lambda _: None
         self._disconnect_handler: Callable[[], None] = lambda: None
@@ -46,15 +45,13 @@ class WinRtPeripheral:
     def set_handlers(
         self, on_write: Callable[[bytes], None], on_disconnect: Callable[[], None]
     ) -> None:
-        """Say what to call when the phone writes a packet, and when the phone disconnects."""
         self._write_handler = on_write
         self._disconnect_handler = on_disconnect
 
     async def start(self) -> None:
         """Create the service and characteristics, then start advertising.
 
-        Raise RuntimeError with a clear message if Windows cannot create the service, or if
-        the adapter does not support the peripheral role.
+        Raise RuntimeError if Windows cannot, or if the adapter cannot be a peripheral.
         """
         service_uuid = uuid.UUID(self._service_uuid)
         created = await GattServiceProvider.create_async(service_uuid)
@@ -117,7 +114,7 @@ class WinRtPeripheral:
     def _on_write_requested(
         self, sender: GattLocalCharacteristic, args: GattWriteRequestedEventArgs
     ) -> None:
-        """Windows says the phone wants to write: read the bytes and call _on_write."""
+        """Windows calls this on its own thread, so the work is handed to the event loop."""
         log.info(f"Write requested: {args}")
 
         if self._loop is None:
@@ -126,9 +123,7 @@ class WinRtPeripheral:
         asyncio.run_coroutine_threadsafe(self._handle_write_request(args, deferral), self._loop)
 
     def _on_subscribers_changed(self, sender: GattLocalCharacteristic, args: object) -> None:
-        """Windows says the phone subscribed or unsubscribed: if no subscribers, call
-        _on_disconnect."""
-
+        """No subscribers left means the phone is gone."""
         log.info(f"Subscribers changed: {args}")
         if len(sender.subscribed_clients) == 0:
             if self._loop is None:
@@ -138,7 +133,6 @@ class WinRtPeripheral:
     async def _handle_write_request(
         self, args: GattWriteRequestedEventArgs, deferral: Deferral
     ) -> None:
-        """Read the bytes from the write request and call _on_write."""
         try:
             request = await args.get_request_async()
             data = bytes(request.value)

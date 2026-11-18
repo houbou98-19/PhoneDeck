@@ -1,10 +1,5 @@
-"""The pairing page: a web page for the computer's screen that shows the QR code, big and clear.
-
-A QR code in a terminal is hard to scan (small, and inverted in a dark window). This makes a page
-with the code in black on white, and a countdown. The page reloads itself every few seconds, so
-when a new pairing key is made (a new Pairing), the new code shows up by itself.
-
-The link with the key is only drawn into the picture. It is not written as text in the page.
+"""A page that shows the pairing QR code big, with a countdown. It reloads itself, so a new code
+shows up by itself. The link is only drawn into the picture, never written as text in the page.
 """
 
 import segno

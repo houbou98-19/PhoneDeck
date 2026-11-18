@@ -1,7 +1,6 @@
-"""SystemControl for Windows: read CPU and RAM load, lock the screen, and control Spotify.
+"""SystemControl for Windows: CPU and RAM load, locking, and Spotify.
 
-The functions that call Windows (mostly through ctypes) are small and private. The rest is
-plain Python, so it can be tested by replacing those.
+The private functions that call Windows are small, so the rest can be tested by replacing them.
 """
 
 import ctypes
@@ -19,7 +18,7 @@ from phonedeck.platform.base import MediaKey, SystemControlError
 
 
 class MEMORYSTATUSEX(ctypes.Structure):
-    """The form that Windows fills in for GlobalMemoryStatusEx (the order of fields matters)."""
+    """What GlobalMemoryStatusEx fills in. The order of the fields matters."""
 
     _fields_ = [
         ("dwLength", wintypes.DWORD),
@@ -35,15 +34,12 @@ class MEMORYSTATUSEX(ctypes.Structure):
 
 
 def _filetime_to_int(ft: wintypes.FILETIME) -> int:
-    """Convert a Windows FILETIME to an integer (number of 100-nanosecond intervals)."""
+    """A FILETIME as an integer, in 100-nanosecond steps."""
     return ft.dwLowDateTime + (ft.dwHighDateTime << 32)
 
 
 def _system_times() -> tuple[int, int, int]:
-    """Return (idle, kernel, user): CPU time since boot, as three growing counters.
-
-    Windows: kernel32.GetSystemTimes. Note that the kernel time INCLUDES the idle time.
-    """
+    """(idle, kernel, user) CPU time since boot, from GetSystemTimes. Kernel includes idle."""
     status = (wintypes.FILETIME * 3)()
     get_system_times = ctypes.WinDLL("kernel32").GetSystemTimes
     get_system_times.argtypes = [ctypes.POINTER(wintypes.FILETIME)] * 3
@@ -57,10 +53,7 @@ def _system_times() -> tuple[int, int, int]:
 
 
 def _memory_load() -> int:
-    """Return how much memory is in use, as a percent (0-100).
-
-    Windows: kernel32.GlobalMemoryStatusEx, the dwMemoryLoad field of MEMORYSTATUSEX.
-    """
+    """Memory in use as a percent, from GlobalMemoryStatusEx."""
     status = MEMORYSTATUSEX()
     status.dwLength = ctypes.sizeof(status)
     get_memory_status = ctypes.WinDLL("kernel32").GlobalMemoryStatusEx
@@ -72,10 +65,7 @@ def _memory_load() -> int:
 
 
 def _lock_workstation() -> bool:
-    """Lock the computer. Return True if Windows accepted it, False if it refused.
-
-    Windows: user32.LockWorkStation (it returns 0 on failure).
-    """
+    """LockWorkStation. True if Windows accepted it."""
     lock_workstation = ctypes.WinDLL("user32").LockWorkStation
     lock_workstation.argtypes = []
     lock_workstation.restype = wintypes.BOOL
@@ -83,12 +73,7 @@ def _lock_workstation() -> bool:
 
 
 def _start_spotify() -> bool:
-    """Start Spotify. Return True if Windows started it, False if it could not.
-
-    Windows: os.startfile("spotify:") hands the address to whatever program is registered for the
-    spotify: scheme, which is what happens when a spotify: link is clicked in a browser. If Spotify
-    is not installed nothing is registered, and Windows raises OSError.
-    """
+    """Open the spotify: link, like clicking one in a browser. False if Spotify is not installed."""
     try:
         os.startfile("spotify:")
     except OSError:
@@ -97,12 +82,7 @@ def _start_spotify() -> bool:
 
 
 async def _spotify_session() -> Session | None:
-    """Spotify's media session, or None if Spotify is not running.
-
-    Windows keeps a media session for every program that plays media (Spotify, a browser tab...).
-    Spotify's session appears when Spotify starts and goes away when it closes, so it also tells
-    whether Spotify runs.
-    """
+    """Spotify's Windows media session. It exists while Spotify runs, so None means not running."""
     manager = await SessionManager.request_async()
     for session in manager.get_sessions():
         if session.source_app_user_model_id.lower().startswith("spotify"):
@@ -111,12 +91,7 @@ async def _spotify_session() -> Session | None:
 
 
 async def _control_spotify(key: MediaKey) -> bool:
-    """Do what the media key says, to Spotify's own media session. Return whether it worked.
-
-    A media key on the keyboard goes to whichever session Windows thinks is current, which is not
-    always Spotify, so this asks Spotify's session directly. False means that Spotify has no
-    session (it is not running) or that it did not accept the request.
-    """
+    """Send the key to Spotify's own session. A real media key goes to whichever is current."""
     session = await _spotify_session()
     if session is None:
         return False
@@ -128,12 +103,7 @@ async def _control_spotify(key: MediaKey) -> bool:
 
 
 def enable_ansi_colors() -> None:
-    """Make the Windows console understand colour codes, so that the QR code is black on white.
-
-    Windows: kernel32.SetConsoleMode with ENABLE_VIRTUAL_TERMINAL_PROCESSING. Windows Terminal
-    and the VS Code terminal already do, an older console window does not until asked. If the
-    output is not a console (a file, a pipe), there is nothing to do.
-    """
+    """Turn on colour codes in the console, so the QR code is black on white."""
     enable_virtual_terminal_processing = 0x0004
     standard_output = -11
     kernel32 = ctypes.WinDLL("kernel32")
@@ -151,13 +121,7 @@ def enable_ansi_colors() -> None:
 
 
 def cpu_percent_from_times(idle: int, kernel: int, user: int) -> int:
-    """Turn the CPU time that passed between two samples into a load percent, 0-100.
-
-    The three numbers are differences between two samples (later minus earlier).
-    The kernel time includes the idle time, so: total = kernel + user, busy = total - idle.
-    Round to the nearest whole number. If no time passed (total is 0), the answer is 0.
-    Never return below 0 or above 100, even if the counters behave oddly.
-    """
+    """CPU load, 0-100, from the time that passed between two samples (later minus earlier)."""
     total = kernel + user
     busy = total - idle
     if total == 0:
@@ -167,18 +131,12 @@ def cpu_percent_from_times(idle: int, kernel: int, user: int) -> int:
 
 
 class WindowsSystemControl:
-    """The real computer. Satisfies phonedeck.platform.base.SystemControl.
-
-    cpu_percent() answers with the load since the PREVIOUS call (the first call: since the
-    object was created). It never waits or sleeps, since it runs inside the event loop.
-    If no time passed since the previous call, it answers 0.
-    """
+    """The real computer. cpu_percent() is the load since the previous call, and never waits."""
 
     def __init__(self) -> None:
         self._last = _system_times()
 
     def cpu_percent(self) -> int:
-        """CPU load as a whole number, 0-100, since the previous call."""
         idle, kernel, user = _system_times()
         last_idle, last_kernel, last_user = self._last
 
@@ -187,24 +145,19 @@ class WindowsSystemControl:
         return percent
 
     def ram_percent(self) -> int:
-        """Memory in use as a whole number, 0-100."""
         return _memory_load()
 
     def lock_screen(self) -> None:
-        """Lock the computer. Raise SystemControlError if Windows refuses."""
         if not _lock_workstation():
             raise SystemControlError("Windows refused to lock the screen")
 
     def start_spotify(self) -> None:
-        """Start Spotify. Raise SystemControlError if Windows cannot (is it installed?)."""
         if not _start_spotify():
             raise SystemControlError("Windows could not start Spotify")
 
     async def spotify_running(self) -> bool:
-        """Whether Spotify is running (it has a media session)."""
         return await _spotify_session() is not None
 
     async def control_spotify(self, key: MediaKey) -> None:
-        """Play/pause, next or previous, on Spotify. Raise SystemControlError if it did not work."""
         if not await _control_spotify(key):
             raise SystemControlError("Spotify did not accept the media request (is it running?)")

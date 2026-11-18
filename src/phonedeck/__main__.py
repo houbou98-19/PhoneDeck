@@ -1,10 +1,7 @@
 """Start PhoneDeck on the computer:  python -m phonedeck
 
-For every phone: a fresh one-time pairing key is made and shown as a QR code in the terminal, the
-computer advertises over Bluetooth, and a phone that scans the code and proves it has the key
-is served. Everything else is refused. Then it starts over, ready for the next phone.
-
-This file only puts the finished parts together. It is tried with a real phone, not with tests.
+Each phone gets a fresh one-time pairing key, shown as a QR code. Then it starts over for the next.
+This file only puts the finished parts together, and is tried with a real phone, not with tests.
 """
 
 import argparse
@@ -37,7 +34,7 @@ PAIRING_PAGE = Path.home() / ".phonedeck" / "pairing.html"
 
 
 def show_pairing(link: str, seconds: float) -> None:
-    """Show the pairing link as a QR code in the terminal (black on white), and as text."""
+    """Show the pairing link as a QR code in the terminal, and log it as text."""
     if sys.stdout.isatty():  # colour codes would only be noise in a file
         enable_ansi_colors()
         sys.stdout.write(render_terminal_qr(link) + "\n")
@@ -46,7 +43,7 @@ def show_pairing(link: str, seconds: float) -> None:
 
 
 def write_pairing_page(link: str, seconds: float) -> None:
-    """Write the pairing page (a big QR code) that the browser shows, and reloads by itself."""
+    """Write the pairing page that the browser shows and reloads."""
     PAIRING_PAGE.parent.mkdir(parents=True, exist_ok=True)
     temporary = PAIRING_PAGE.with_suffix(".tmp")
     temporary.write_text(render_pairing_page(link, seconds), encoding="utf-8")

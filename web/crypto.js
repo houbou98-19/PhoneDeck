@@ -1,16 +1,6 @@
-// The cryptographic building blocks of the handshake, with the browser's WebCrypto.
-// The twin of src/phonedeck/security/crypto.py: the same key derivation, the same sealing, and
-// the tests use the same known values. Nothing is invented here: HKDF and AES-GCM are called, and
-// that is all.
-//
-// How the pieces fit together (the design is in docs/decisions.md):
-//   * The computer shows a pairing key in a QR code. The phone scans it. It never travels over
-//     Bluetooth.
-//   * Each side makes a random nonce and sends it in the clear.
-//   * Both run deriveSessionKeys(pairingKey, clientNonce, serverNonce) and get the same two keys,
-//     one for each direction.
-//   * Every later message is sealed with AES-GCM. The message kind and request id are not hidden,
-//     but they are "additional authenticated data": if anyone changes them, opening fails.
+// The cryptography of the handshake, with the browser's WebCrypto: HKDF and AES-GCM.
+// The twin of src/phonedeck/security/crypto.py: the same key derivation and sealing, and the
+// tests use the same known values. See docs/protocol.md for how they are used.
 
 export const PAIRING_KEY_SIZE = 16; // bytes: 128 random bits
 export const NONCE_SIZE = 16; // bytes

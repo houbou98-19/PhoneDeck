@@ -1,42 +1,6 @@
-"""SecureChannel: the handshake, and messages that are encrypted and checked.
+"""SecureChannel: a handshake with the pairing key, then encrypted and authenticated messages.
 
-A SecureChannel sits on top of a MessageChannel. Before the handshake nothing can be sent or
-received. After it, send() and receive() work like on a MessageChannel, but the body of every
-message is encrypted, and nothing that is not authentic gets through.
-
-The same protocol runs on the phone (the CLIENT, in JavaScript) and on the computer (the SERVER,
-here), so the tests run both roles in Python against each other.
-
-THE HANDSHAKE. Four HANDSHAKE messages, all with request_id 0. The body of each is
-| step (1 byte, a HandshakeStep) | data |
-
-  1. CLIENT_HELLO    client -> server   data: the client's nonce (NONCE_SIZE bytes, in the clear)
-  2. SERVER_HELLO    server -> client   data: the server's nonce (NONCE_SIZE bytes, in the clear)
-     Both sides now run derive_session_keys(pairing_key, client_nonce, server_nonce).
-  3. CLIENT_CONFIRM  client -> server   data: seal(client_to_server, counter 0, aad, b"")
-  4. SERVER_CONFIRM  server -> client   data: seal(server_to_client, counter 0, aad, b"")
-     Here aad is the one every sealed message uses, see _aad() below.
-
-Step 3 proves to the server that the client has the pairing key, and step 4 proves it the other
-way. A side that gets a wrong message (the wrong step, a nonce of the wrong size, anything
-that is not a HANDSHAKE, garbage, a confirm that does not open or has the wrong counter) closes
-the underlying channel and raises HandshakeError. If the transport closes during the handshake,
-TransportClosedError is raised as it is. After step 4 each side sends with its own direction's
-key (the client with client_to_server, the server with server_to_client).
-
-AFTER THE HANDSHAKE. send(message) turns the body into
-    seal(send_key, counter, aad, body)   with aad = _aad(message.kind, message.request_id)
-and sends Message(kind, request_id, that). The counters start at 1 (0 was used by the confirm)
-and go up by one for every message sent. receive() does the opposite, with open_sealed().
-
-  * The kind and request id are visible but authenticated (they are the aad): change one on the
-    way, and the message is refused.
-  * receive() refuses a counter that is not larger than the last one it accepted (a replay).
-  * Anything that fails (a message that does not open, a replay, a HANDSHAKE message, a message in
-    the clear) closes the underlying channel and raises SecureChannelError. After that, every
-    call raises TransportClosedError, because the channel is closed.
-  * Garbage (FrameError) and unknown kinds (MessageError) from the layer below are not hidden:
-    they pass through, and the channel stays usable, like on a MessageChannel.
+The protocol is described in docs/protocol.md. The phone runs the same protocol in web/secure.js.
 """
 
 from enum import Enum, IntEnum
@@ -87,17 +51,14 @@ class HandshakeError(SecureChannelError):
 
 
 def _aad(kind: MessageKind, request_id: int) -> bytes:
-    """The additional authenticated data of a message: the kind (1 byte), then the request id
-    (2 bytes, big-endian). It is not encrypted, but a change to it breaks the check.
-    """
+    """The part of a message that is sent in the clear but covered by the check."""
     return kind.to_bytes(1, "big") + request_id.to_bytes(2, "big")
 
 
 class SecureChannel:
-    """Wraps a MessageChannel so that messages are encrypted and checked. See the module text."""
+    """Wraps a MessageChannel so that messages are encrypted and checked."""
 
     def __init__(self, channel: MessageChannel, role: Role, pairing_key: bytes) -> None:
-        """Remember the channel, the role, and the pairing key."""
         self._channel = channel
         self._role = role
         self._pairing_key = pairing_key
@@ -132,7 +93,6 @@ class SecureChannel:
             await self._client_handshake()
 
     async def _server_handshake(self) -> None:
-
         client_nonce = await self._receive_step(HandshakeStep.CLIENT_HELLO)
         if len(client_nonce) != NONCE_SIZE:
             await self._fail_handshake(
@@ -158,7 +118,6 @@ class SecureChannel:
         self._receive_key = keys.client_to_server
 
     async def _client_handshake(self) -> None:
-
         client_nonce = new_nonce()
         await self._channel.send(
             Message(MessageKind.HANDSHAKE, 0, bytes([HandshakeStep.CLIENT_HELLO]) + client_nonce)
@@ -184,12 +143,7 @@ class SecureChannel:
         self._receive_key = keys.server_to_client
 
     async def send(self, message: Message) -> None:
-        """Encrypt and send one message.
-
-        Raise SecureChannelError if the handshake is not done, if the kind is HANDSHAKE, or if
-        the body is longer than MAX_BODY_SIZE - SEAL_OVERHEAD (then nothing is sent). A bad
-        request id raises MessageError, as on a MessageChannel.
-        """
+        """Encrypt and send one message. Nothing is sent if it raises."""
         if self._send_key is None:
             raise SecureChannelError("Cannot send a message before the handshake")
         if message.kind == MessageKind.HANDSHAKE:
@@ -209,11 +163,7 @@ class SecureChannel:
         await self._channel.send(Message(message.kind, message.request_id, sealed))
 
     async def receive(self) -> Message:
-        """Wait for the next message, check it, decrypt it, and return it.
-
-        Raise SecureChannelError if the handshake is not done, or if the message is not
-        trustworthy (see the module text; the channel is then closed).
-        """
+        """Wait for the next message and decrypt it. An untrustworthy one closes the channel."""
         if self._receive_key is None:
             raise SecureChannelError("Cannot receive a message before the handshake")
         message = await self._channel.receive()
@@ -247,7 +197,7 @@ class SecureChannel:
         raise HandshakeError(error)
 
     async def _check_confirm(self, key: bytes, body: bytes) -> None:
-        """Check the data of a CONFIRM: it must open with `key`, with counter 0 and no text."""
+        """A CONFIRM must open with `key`, with counter 0 and an empty text."""
         try:
             counter, plaintext = open_sealed(key, _aad(MessageKind.HANDSHAKE, 0), body)
         except CryptoError:

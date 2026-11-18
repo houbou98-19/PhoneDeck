@@ -1,7 +1,7 @@
 """Tests for phonedeck.platform.winrt_peripheral.WinRtPeripheral.
 
 Only what can be checked without a Bluetooth adapter. Advertising, writes and notifications
-need real hardware: try them with spikes/ble_echo.py and nRF Connect (see that file).
+need real hardware: try them with a phone, or with a BLE scanner such as nRF Connect.
 """
 
 import sys

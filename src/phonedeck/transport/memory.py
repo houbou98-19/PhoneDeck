@@ -8,10 +8,7 @@ from phonedeck.transport.base import TransportClosedError, TransportError
 
 
 class InMemoryTransport:
-    """One end of a pair of connected in-memory transports.
-
-    Make a connected pair with create_pair(). What one end sends, the other end receives.
-    """
+    """One end of a connected pair (see create_pair). What one end sends, the other receives."""
 
     def __init__(self, max_packet_size: int):
         self._max_packet_size = max_packet_size
@@ -21,7 +18,6 @@ class InMemoryTransport:
 
     @classmethod
     def create_pair(cls, max_packet_size: int = MAX_FRAME_SIZE) -> tuple[Self, Self]:
-        """Make two connected ends. Both report the same max_packet_size."""
         end1 = cls(max_packet_size=max_packet_size)
         end2 = cls(max_packet_size=max_packet_size)
         end1._other = end2
@@ -34,10 +30,7 @@ class InMemoryTransport:
         return self._max_packet_size
 
     async def send(self, packet: bytes) -> None:
-        """Send a packet to the other end.
-
-        Raise TransportError if it is too large, or if the transport is closed.
-        """
+        """Send a packet to the other end."""
         if len(packet) > self._max_packet_size:
             raise TransportError(
                 f"Packet too large: {len(packet)} bytes, max is {self._max_packet_size}"
@@ -47,10 +40,7 @@ class InMemoryTransport:
         await self._other._queue.put(packet)
 
     async def receive(self) -> bytes:
-        """Wait for the next packet from the other end and return it.
-
-        Raise TransportClosedError if the other end is closed or if this end is closed.
-        """
+        """Wait for the next packet. Raise TransportClosedError once either end is closed."""
         if self._closed:
             raise TransportClosedError("Transport is closed")
         packet = await self._queue.get()
