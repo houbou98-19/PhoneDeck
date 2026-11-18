@@ -53,19 +53,20 @@ class WinRtPeripheral:
 
         Raise RuntimeError if Windows cannot, or if the adapter cannot be a peripheral.
         """
-        service_uuid = uuid.UUID(self._service_uuid)
-        created = await GattServiceProvider.create_async(service_uuid)
-        if created.error != BluetoothError.SUCCESS:
-            raise RuntimeError(f"Could not create GATT service: {created.error}")
         adapter = await BluetoothAdapter.get_default_async()
         if adapter is None:
             raise RuntimeError("No Bluetooth adapter found")
         if not adapter.is_peripheral_role_supported:
             raise RuntimeError("Bluetooth adapter does not support peripheral role")
+        created = await GattServiceProvider.create_async(uuid.UUID(self._service_uuid))
+        if created.error != BluetoothError.SUCCESS:
+            raise RuntimeError(f"Could not create GATT service: {created.error}")
         self._provider = created.service_provider
 
         self._write_characteristic = await self._create_characteristic(
-            write_characteristic_uuid(self._service_uuid), GattCharacteristicProperties.WRITE
+            write_characteristic_uuid(self._service_uuid),
+            GattCharacteristicProperties.WRITE
+            | GattCharacteristicProperties.WRITE_WITHOUT_RESPONSE,
         )
         self._notify_characteristic = await self._create_characteristic(
             notify_characteristic_uuid(self._service_uuid), GattCharacteristicProperties.NOTIFY
