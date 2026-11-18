@@ -21,8 +21,8 @@ function say(text) {
 }
 
 /**
- * The pairing link: the address in the QR code has the service UUID and the one-time key after
- * the # (the browser never sends that part to a server). It can also be pasted.
+ * The pairing code: the address in the QR code has the service UUID and the one-time key after
+ * the # (the browser never sends that part to a server). That part can also be pasted or typed.
  */
 function readPairing() {
   const pasted = $("link").value.trim();

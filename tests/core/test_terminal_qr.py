@@ -8,12 +8,13 @@ import re
 
 import segno
 
-from phonedeck.core.pairing import Pairing
+from phonedeck.core.pairing import Pairing, parse_pairing_fragment
 from phonedeck.core.terminal_qr import (
     BLACK_BACKGROUND,
     BLACK_TEXT,
     RESET,
     UPPER_HALF_BLOCK,
+    pairing_instructions,
     render_terminal_qr,
 )
 
@@ -67,3 +68,15 @@ def test_a_wider_border_makes_a_bigger_drawing() -> None:
     large = render_terminal_qr(LINK, border=4)
 
     assert len(large.split("\n")) > len(small.split("\n"))
+
+
+def test_the_instructions_show_the_address_and_a_code_that_can_be_typed() -> None:
+    text = pairing_instructions(LINK, 60)
+    address, _, fragment = LINK.partition("#")
+
+    code = text.strip().splitlines()[-1].strip()  # the code is the last line, on its own
+
+    assert address in text
+    assert "60 seconds" in text
+    assert code == fragment
+    assert parse_pairing_fragment(code)[0] == "277cedef-a9df-4ddf-bfd3-ee550dd20035"

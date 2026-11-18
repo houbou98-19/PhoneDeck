@@ -18,7 +18,7 @@ from phonedeck.core.pairing import PAIRING_LIFETIME_SECONDS, Pairing
 from phonedeck.core.pairing_page import render_pairing_page
 from phonedeck.core.secure_channel import Role, SecureChannel
 from phonedeck.core.session import pair_and_serve
-from phonedeck.core.terminal_qr import render_terminal_qr
+from phonedeck.core.terminal_qr import pairing_instructions, render_terminal_qr
 from phonedeck.platform.windows import WindowsSystemControl, enable_ansi_colors
 from phonedeck.platform.winrt_peripheral import WinRtPeripheral
 from phonedeck.transport.ble import BleTransport
@@ -34,12 +34,14 @@ PAIRING_PAGE = Path.home() / ".phonedeck" / "pairing.html"
 
 
 def show_pairing(link: str, seconds: float) -> None:
-    """Show the pairing link as a QR code in the terminal, and log it as text."""
+    """Show the pairing link as a QR code and a code to type. Without a console, log the link."""
     if sys.stdout.isatty():  # colour codes would only be noise in a file
         enable_ansi_colors()
-        sys.stdout.write(render_terminal_qr(link) + "\n")
+        sys.stdout.write(render_terminal_qr(link) + "\n\n")
+        sys.stdout.write(pairing_instructions(link, seconds) + "\n")
         sys.stdout.flush()
-    log.info("Scan the code with the phone within %d seconds, or open: %s", seconds, link)
+    else:
+        log.info("Scan the code with the phone within %d seconds, or open: %s", seconds, link)
 
 
 def write_pairing_page(link: str, seconds: float) -> None:

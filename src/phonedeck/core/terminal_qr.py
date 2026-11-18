@@ -15,6 +15,17 @@ UPPER_HALF_BLOCK = "▀"
 RESET = "\x1b[0m"
 
 
+def pairing_instructions(link: str, seconds: float) -> str:
+    """The text for pairing without the camera: the page's address, and the code to type."""
+    address, _, code = link.partition("#")
+    return (
+        f"Scan the code with the phone's camera within {seconds:.0f} seconds.\n"
+        f"Or open {address} on the phone, and paste or type this code:\n"
+        f"\n"
+        f"    {code}\n"
+    )
+
+
 def render_terminal_qr(link: str, border: int = 2) -> str:
     """The QR code for this link as lines of text with ANSI colour codes."""
     matrix = segno.make(link, error="l").matrix
