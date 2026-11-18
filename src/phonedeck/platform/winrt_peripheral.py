@@ -64,10 +64,10 @@ class WinRtPeripheral:
             raise RuntimeError("Bluetooth adapter does not support peripheral role")
         self._provider = created.service_provider
 
-        self._write_characteristic = await self.create_characteristic(
+        self._write_characteristic = await self._create_characteristic(
             write_characteristic_uuid(self._service_uuid), GattCharacteristicProperties.WRITE
         )
-        self._notify_characteristic = await self.create_characteristic(
+        self._notify_characteristic = await self._create_characteristic(
             notify_characteristic_uuid(self._service_uuid), GattCharacteristicProperties.NOTIFY
         )
 
@@ -81,7 +81,7 @@ class WinRtPeripheral:
             adv.is_discoverable = True
             self._provider.start_advertising(adv)
 
-    async def create_characteristic(
+    async def _create_characteristic(
         self, characteristic_uuid: str, properties: GattCharacteristicProperties
     ) -> GattLocalCharacteristic:
         """Create a characteristic with the given UUID and properties."""
@@ -115,7 +115,7 @@ class WinRtPeripheral:
         self, sender: GattLocalCharacteristic, args: GattWriteRequestedEventArgs
     ) -> None:
         """Windows calls this on its own thread, so the work is handed to the event loop."""
-        log.info(f"Write requested: {args}")
+        log.info("Write requested: %s", args)
 
         if self._loop is None:
             raise RuntimeError("Event loop not initialized. Call start() first.")
@@ -124,7 +124,7 @@ class WinRtPeripheral:
 
     def _on_subscribers_changed(self, sender: GattLocalCharacteristic, args: object) -> None:
         """No subscribers left means the phone is gone."""
-        log.info(f"Subscribers changed: {args}")
+        log.info("Subscribers changed: %s", args)
         if len(sender.subscribed_clients) == 0:
             if self._loop is None:
                 raise RuntimeError("Event loop not initialized. Call start() first.")
