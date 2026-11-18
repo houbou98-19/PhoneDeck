@@ -15,6 +15,7 @@ import {
   characteristicUuids,
   decodeMessage,
   encodeMessage,
+  parsePairingFragment,
   parseResponseBody,
   uuid5,
 } from "../protocol.js";
@@ -155,4 +156,43 @@ test("parseResponseBody splits the status from the data", () => {
 
 test("parseResponseBody rejects an empty body", () => {
   assert.throws(() => parseResponseBody(new Uint8Array()), ProtocolError);
+});
+
+// --- The pairing link (the same cases as the Python tests of core/pairing.py) ---
+
+const PAIRING_SERVICE = "277cedef-a9df-4ddf-bfd3-ee550dd20035";
+const PAIRING_KEY_TEXT = "AAECAwQFBgcICQoLDA0ODw"; // the 16 bytes 00 01 02 ... 0f
+
+test("parsePairingFragment reads the service UUID and the key", () => {
+  const { serviceUuid, key } = parsePairingFragment(`${PAIRING_SERVICE}.${PAIRING_KEY_TEXT}`);
+
+  assert.equal(serviceUuid, PAIRING_SERVICE);
+  assert.equal(hex(key), "000102030405060708090a0b0c0d0e0f");
+});
+
+test("parsePairingFragment allows a leading # and capital letters", () => {
+  const { serviceUuid } = parsePairingFragment(`#${PAIRING_SERVICE.toUpperCase()}.${PAIRING_KEY_TEXT}`);
+
+  assert.equal(serviceUuid, PAIRING_SERVICE);
+});
+
+test("parsePairingFragment reads the URL-safe characters - and _", () => {
+  // The bytes fb ff fe fd ... need - and _ where ordinary base64 has + and / ("+//+/fz7+vn49/b19PPy8Q").
+  const { key } = parsePairingFragment(`${PAIRING_SERVICE}.-__-_fz7-vn49_b19PPy8Q`);
+
+  assert.equal(hex(key), "fbfffefdfcfbfaf9f8f7f6f5f4f3f2f1");
+});
+
+test("parsePairingFragment rejects a bad fragment", () => {
+  for (const bad of [
+    "",
+    PAIRING_SERVICE, // no key at all
+    `${PAIRING_SERVICE}.`, // an empty key
+    `not-a-uuid.${PAIRING_KEY_TEXT}`,
+    `${PAIRING_SERVICE}.${PAIRING_KEY_TEXT}AA`, // a key that is too long
+    `${PAIRING_SERVICE}.AAEC`, // a key that is too short
+    `${PAIRING_SERVICE}.!!!!`, // not base64
+  ]) {
+    assert.throws(() => parsePairingFragment(bad), ProtocolError, `should reject: ${bad}`);
+  }
 });

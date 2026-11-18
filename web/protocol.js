@@ -84,6 +84,36 @@ export async function characteristicUuids(serviceUuid) {
   };
 }
 
+// --- The pairing link ---
+
+/**
+ * Read the part after the # of the address in the QR code: a service UUID, a dot and the pairing
+ * key (URL-safe base64, no padding). The twin of parse_pairing_fragment in core/pairing.py.
+ *
+ * @param {string} fragment for example "277cedef-a9df-4ddf-bfd3-ee550dd20035.AAECAwQFBgcICQoLDA0ODw"
+ *   (a leading # is allowed)
+ * @returns {{serviceUuid: string, key: Uint8Array}} the service UUID in lowercase
+ * @throws {ProtocolError} if it is not a service UUID, a dot and a key of 16 bytes
+ */
+export function parsePairingFragment(fragment) {
+  const text = String(fragment).replace(/^#/, "");
+  const dot = text.indexOf(".");
+  if (dot === -1) throw new ProtocolError("The link has no key");
+  const serviceUuid = bytesToUuid(uuidToBytes(text.slice(0, dot)));
+
+  const keyText = text.slice(dot + 1);
+  if (!/^[A-Za-z0-9_-]*$/.test(keyText) || keyText.length % 4 === 1) {
+    throw new ProtocolError("The key in the link is not valid base64");
+  }
+  const base64 = keyText.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(base64 + "=".repeat((4 - (base64.length % 4)) % 4));
+  const key = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  if (key.length !== 16) {
+    throw new ProtocolError(`The key must be 16 bytes, got ${key.length}`);
+  }
+  return { serviceUuid, key };
+}
+
 // --- Messages ---
 
 /**
