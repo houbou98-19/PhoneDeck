@@ -28,7 +28,7 @@ log = logging.getLogger("phonedeck")
 # Where the phone's web page is served: a static page on GitHub Pages, so no computer needs to
 # host anything. For development, run the page on this computer (python -m http.server in web/)
 # and use --web-url http://localhost:8000/ with `adb reverse tcp:8000 tcp:8000`.
-DEFAULT_WEB_URL = "https://houbou98-19.github.io/phonedeck-web/"
+DEFAULT_WEB_URL = "https://houbou98-19.github.io/PhoneDeck/"
 
 PAIRING_PAGE = Path.home() / ".phonedeck" / "pairing.html"
 
