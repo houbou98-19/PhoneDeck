@@ -151,3 +151,8 @@ def test_real_cpu_percent_is_a_percent() -> None:
 
     assert isinstance(percent, int)
     assert 0 <= percent <= 100
+
+
+@on_windows
+def test_enabling_ansi_colours_does_not_fail_even_when_there_is_no_console() -> None:
+    windows.enable_ansi_colors()  # under pytest the output is captured, so there is no console

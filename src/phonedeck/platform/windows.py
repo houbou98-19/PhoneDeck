@@ -74,6 +74,29 @@ def _lock_workstation() -> bool:
     return bool(lock_workstation())
 
 
+def enable_ansi_colors() -> None:
+    """Make the Windows console understand colour codes, so that the QR code is black on white.
+
+    Windows: kernel32.SetConsoleMode with ENABLE_VIRTUAL_TERMINAL_PROCESSING. Windows Terminal
+    and the VS Code terminal already do, an older console window does not until asked. If the
+    output is not a console (a file, a pipe), there is nothing to do.
+    """
+    enable_virtual_terminal_processing = 0x0004
+    standard_output = -11
+    kernel32 = ctypes.WinDLL("kernel32")
+    kernel32.GetStdHandle.argtypes = [wintypes.DWORD]
+    kernel32.GetStdHandle.restype = wintypes.HANDLE
+    kernel32.GetConsoleMode.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.GetConsoleMode.restype = wintypes.BOOL
+    kernel32.SetConsoleMode.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel32.SetConsoleMode.restype = wintypes.BOOL
+
+    handle = kernel32.GetStdHandle(standard_output)
+    mode = wintypes.DWORD()
+    if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+        kernel32.SetConsoleMode(handle, mode.value | enable_virtual_terminal_processing)
+
+
 def cpu_percent_from_times(idle: int, kernel: int, user: int) -> int:
     """Turn the CPU time that passed between two samples into a load percent, 0-100.
 
