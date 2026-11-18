@@ -8,6 +8,8 @@ version = "0.0.1"
 description = "Turn your phone into a wireless control panel for your PC over BLE."
 requires-python = ">=3.12"
 dependencies = [
+    "cryptography",
+    "segno",
     "winrt-runtime",
     "winrt-Windows.Foundation",
     "winrt-Windows.Foundation.Collections",
