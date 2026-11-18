@@ -14,6 +14,7 @@ from phonedeck.core.channel import MessageChannel
 from phonedeck.core.handler import Handler, ResponseStatus
 from phonedeck.core.secure_channel import Role, SecureChannel
 from phonedeck.core.server import serve
+from phonedeck.platform.base import MediaKey
 from phonedeck.protocol.frame import encode_frame
 from phonedeck.protocol.message import Message, MessageKind, message_to_frame
 from phonedeck.transport.memory import InMemoryTransport
@@ -35,6 +36,15 @@ class FakeSystem:
 
     def lock_screen(self) -> None:
         self.lock_calls += 1
+
+    def start_spotify(self) -> None:
+        pass
+
+    async def spotify_running(self) -> bool:
+        return False
+
+    async def control_spotify(self, key: MediaKey) -> None:
+        pass
 
 
 class FlippingTransport:

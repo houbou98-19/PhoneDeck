@@ -4,13 +4,14 @@ The three functions that call Windows are replaced, so these tests never lock th
 The last section calls the real Windows functions (read-only) and runs on Windows only.
 """
 
+import asyncio
 import sys
 import time
 
 import pytest
 
 from phonedeck.platform import windows
-from phonedeck.platform.base import SystemControl, SystemControlError
+from phonedeck.platform.base import MediaKey, SystemControl, SystemControlError
 from phonedeck.platform.windows import WindowsSystemControl, cpu_percent_from_times
 
 # --- The percent calculation (a pure function). ---
@@ -109,6 +110,73 @@ def test_lock_screen_raises_if_windows_refuses(monkeypatch: pytest.MonkeyPatch) 
 
     with pytest.raises(SystemControlError):
         WindowsSystemControl().lock_screen()
+
+
+def test_start_spotify_asks_windows_to_start_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def accepting_start() -> bool:
+        calls.append("spotify")
+        return True
+
+    monkeypatch.setattr(windows, "_system_times", lambda: (0, 0, 0))
+    monkeypatch.setattr(windows, "_start_spotify", accepting_start)
+
+    WindowsSystemControl().start_spotify()
+
+    assert calls == ["spotify"]
+
+
+def test_start_spotify_raises_if_windows_cannot(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(windows, "_system_times", lambda: (0, 0, 0))
+    monkeypatch.setattr(windows, "_start_spotify", lambda: False)
+
+    with pytest.raises(SystemControlError):
+        WindowsSystemControl().start_spotify()
+
+
+@pytest.mark.parametrize("has_session", [True, False])
+def test_spotify_runs_when_it_has_a_media_session(
+    monkeypatch: pytest.MonkeyPatch, has_session: bool
+) -> None:
+    async def find_session() -> object | None:
+        return object() if has_session else None
+
+    monkeypatch.setattr(windows, "_system_times", lambda: (0, 0, 0))
+    monkeypatch.setattr(windows, "_spotify_session", find_session)
+
+    assert asyncio.run(WindowsSystemControl().spotify_running()) is has_session
+
+
+@pytest.mark.parametrize("key", list(MediaKey))
+def test_control_spotify_passes_the_key_to_the_media_session(
+    monkeypatch: pytest.MonkeyPatch, key: MediaKey
+) -> None:
+    received: list[MediaKey] = []
+
+    async def accepting_session(received_key: MediaKey) -> bool:
+        received.append(received_key)
+        return True
+
+    monkeypatch.setattr(windows, "_system_times", lambda: (0, 0, 0))
+    monkeypatch.setattr(windows, "_control_spotify", accepting_session)
+
+    asyncio.run(WindowsSystemControl().control_spotify(key))
+
+    assert received == [key]
+
+
+def test_control_spotify_raises_if_spotify_does_not_accept(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def refusing_session(key: MediaKey) -> bool:
+        return False
+
+    monkeypatch.setattr(windows, "_system_times", lambda: (0, 0, 0))
+    monkeypatch.setattr(windows, "_control_spotify", refusing_session)
+
+    with pytest.raises(SystemControlError):
+        asyncio.run(WindowsSystemControl().control_spotify(MediaKey.NEXT))
 
 
 def test_it_fits_the_system_control_interface(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -14,6 +14,7 @@ from phonedeck.core.handler import Handler
 from phonedeck.core.pairing import Pairing
 from phonedeck.core.secure_channel import Role, SecureChannel
 from phonedeck.core.session import pair_and_serve
+from phonedeck.platform.base import MediaKey
 from phonedeck.protocol.frame import encode_frame
 from phonedeck.protocol.message import Message, MessageKind, message_to_frame
 from phonedeck.transport.base import TransportClosedError
@@ -34,6 +35,15 @@ class FakeSystem:
 
     def lock_screen(self) -> None:
         self.lock_calls += 1
+
+    def start_spotify(self) -> None:
+        pass
+
+    async def spotify_running(self) -> bool:
+        return False
+
+    async def control_spotify(self, key: MediaKey) -> None:
+        pass
 
 
 def run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:

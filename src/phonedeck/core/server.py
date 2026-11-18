@@ -32,7 +32,7 @@ async def serve(channel: Channel, handler: Handler) -> None:
     while True:
         try:
             message = await channel.receive()
-            response = handler.handle(message)
+            response = await handler.handle(message)
             await channel.send(response)
         except (FrameError, MessageError) as e:
             log.warning("Ignoring bad message: %s", e)

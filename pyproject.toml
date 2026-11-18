@@ -16,6 +16,7 @@ dependencies = [
     "winrt-Windows.Storage.Streams",
     "winrt-Windows.Devices.Bluetooth",
     "winrt-Windows.Devices.Bluetooth.GenericAttributeProfile",
+    "winrt-Windows.Media.Control",
 ]
 
 [project.optional-dependencies]

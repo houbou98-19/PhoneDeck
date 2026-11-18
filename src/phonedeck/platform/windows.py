@@ -1,13 +1,21 @@
-"""SystemControl for Windows: read CPU and RAM load, and lock the screen.
+"""SystemControl for Windows: read CPU and RAM load, lock the screen, and control Spotify.
 
-The three functions that call Windows (through ctypes) are small and private. The rest is
-plain Python, so it can be tested by replacing those three.
+The functions that call Windows (mostly through ctypes) are small and private. The rest is
+plain Python, so it can be tested by replacing those.
 """
 
 import ctypes
+import os
 from ctypes import wintypes
 
-from phonedeck.platform.base import SystemControlError
+from winrt.windows.media.control import (
+    GlobalSystemMediaTransportControlsSession as Session,
+)
+from winrt.windows.media.control import (
+    GlobalSystemMediaTransportControlsSessionManager as SessionManager,
+)
+
+from phonedeck.platform.base import MediaKey, SystemControlError
 
 
 class MEMORYSTATUSEX(ctypes.Structure):
@@ -72,6 +80,51 @@ def _lock_workstation() -> bool:
     lock_workstation.argtypes = []
     lock_workstation.restype = wintypes.BOOL
     return bool(lock_workstation())
+
+
+def _start_spotify() -> bool:
+    """Start Spotify. Return True if Windows started it, False if it could not.
+
+    Windows: os.startfile("spotify:") hands the address to whatever program is registered for the
+    spotify: scheme, which is what happens when a spotify: link is clicked in a browser. If Spotify
+    is not installed nothing is registered, and Windows raises OSError.
+    """
+    try:
+        os.startfile("spotify:")
+    except OSError:
+        return False
+    return True
+
+
+async def _spotify_session() -> Session | None:
+    """Spotify's media session, or None if Spotify is not running.
+
+    Windows keeps a media session for every program that plays media (Spotify, a browser tab...).
+    Spotify's session appears when Spotify starts and goes away when it closes, so it also tells
+    whether Spotify runs.
+    """
+    manager = await SessionManager.request_async()
+    for session in manager.get_sessions():
+        if session.source_app_user_model_id.lower().startswith("spotify"):
+            return session
+    return None
+
+
+async def _control_spotify(key: MediaKey) -> bool:
+    """Do what the media key says, to Spotify's own media session. Return whether it worked.
+
+    A media key on the keyboard goes to whichever session Windows thinks is current, which is not
+    always Spotify, so this asks Spotify's session directly. False means that Spotify has no
+    session (it is not running) or that it did not accept the request.
+    """
+    session = await _spotify_session()
+    if session is None:
+        return False
+    if key == MediaKey.PLAY_PAUSE:
+        return bool(await session.try_toggle_play_pause_async())
+    if key == MediaKey.NEXT:
+        return bool(await session.try_skip_next_async())
+    return bool(await session.try_skip_previous_async())
 
 
 def enable_ansi_colors() -> None:
@@ -141,3 +194,17 @@ class WindowsSystemControl:
         """Lock the computer. Raise SystemControlError if Windows refuses."""
         if not _lock_workstation():
             raise SystemControlError("Windows refused to lock the screen")
+
+    def start_spotify(self) -> None:
+        """Start Spotify. Raise SystemControlError if Windows cannot (is it installed?)."""
+        if not _start_spotify():
+            raise SystemControlError("Windows could not start Spotify")
+
+    async def spotify_running(self) -> bool:
+        """Whether Spotify is running (it has a media session)."""
+        return await _spotify_session() is not None
+
+    async def control_spotify(self, key: MediaKey) -> None:
+        """Play/pause, next or previous, on Spotify. Raise SystemControlError if it did not work."""
+        if not await _control_spotify(key):
+            raise SystemControlError("Spotify did not accept the media request (is it running?)")
