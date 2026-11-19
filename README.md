@@ -66,9 +66,18 @@ key during pairing. Host it yourself if you do not want to trust the default.
 - **Computer:** Windows 10/11 (x64) with a Bluetooth adapter that supports the **peripheral role**.
   Many cheap USB dongles do not. An adapter built into a recent laptop usually does.
 - **Phone:** Android with Chrome. Web Bluetooth is not available in Chrome on iOS.
-- Python 3.12
+- Python 3.12, only to run it from source
 
 ## Run it
+
+**Download:** get `phonedeck-windows-x64.zip` from the
+[latest release](https://github.com/houbou98-19/PhoneDeck/releases/latest), unzip it and run
+`phonedeck.exe`. GitHub Actions builds it from the tagged source (see
+[release.yml](.github/workflows/release.yml)), and the release has a SHA-256 checksum. Windows
+SmartScreen may warn because the program is not code-signed: choose **More info**, then
+**Run anyway**.
+
+**From source:**
 
 ```powershell
 py -3.12 -m venv .venv
@@ -78,7 +87,7 @@ pip install --no-deps -e .
 python -m phonedeck
 ```
 
-Scan the QR code shown in the terminal with the phone's camera. It opens the phone page. Tap
+Then scan the QR code shown in the terminal with the phone's camera. It opens the phone page. Tap
 **Connect**, and choose the computer in Chrome's list.
 
 Options: `--pairing-seconds` (how long a code is valid), `--browser` (also show the QR code big in
