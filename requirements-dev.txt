@@ -4,6 +4,8 @@
 #
 #    pip-compile --extra=dev --output-file=requirements-dev.txt --strip-extras pyproject.toml
 #
+altgraph==0.17.5
+    # via pyinstaller
 ast-serialize==0.13.1
     # via mypy
 build==1.6.1
@@ -29,10 +31,14 @@ mypy-extensions==1.2.0
 packaging==26.3
     # via
     #   build
+    #   pyinstaller
+    #   pyinstaller-hooks-contrib
     #   pytest
     #   wheel
 pathspec==1.1.1
     # via mypy
+pefile==2024.8.26
+    # via pyinstaller
 pip-tools==7.7.0
     # via phonedeck (pyproject.toml)
 pluggy==1.7.0
@@ -41,12 +47,18 @@ pycparser==3.12
     # via cffi
 pygments==2.21.0
     # via pytest
+pyinstaller==6.22.3
+    # via phonedeck (pyproject.toml)
+pyinstaller-hooks-contrib==2026.10
+    # via pyinstaller
 pyproject-hooks==1.3.3
     # via
     #   build
     #   pip-tools
 pytest==9.2.0
     # via phonedeck (pyproject.toml)
+pywin32-ctypes==0.2.3
+    # via pyinstaller
 ruff==0.17.5
     # via phonedeck (pyproject.toml)
 segno==1.6.6
