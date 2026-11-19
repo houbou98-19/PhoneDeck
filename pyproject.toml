@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phonedeck"
-version = "0.0.1"
+version = "0.1.0"
 description = "Turn your phone into a wireless control panel for your PC over BLE."
 requires-python = ">=3.12"
 dependencies = [
