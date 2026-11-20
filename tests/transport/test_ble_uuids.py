@@ -1,8 +1,4 @@
-"""Tests for the characteristic UUIDs, which are derived from the service UUID.
-
-The web page must make the same calculation, so the exact values are pinned here. They also
-work as test vectors when the JavaScript version is written.
-"""
+"""Tests for the characteristic UUIDs. The web page derives the same ones, so they are pinned."""
 
 import uuid
 

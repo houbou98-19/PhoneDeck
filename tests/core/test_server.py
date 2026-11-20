@@ -1,8 +1,4 @@
-"""Tests for phonedeck.core.server.serve.
-
-The phone is a MessageChannel on the other end of an in-memory transport pair, and the computer
-is replaced by FakeSystem. The server runs as a background task while the "phone" talks to it.
-"""
+"""Tests for serve. The server runs in the background while the test plays the phone."""
 
 import asyncio
 from collections.abc import Awaitable, Callable
@@ -19,8 +15,6 @@ from phonedeck.transport.memory import InMemoryTransport
 
 
 class FakeSystem:
-    """A computer with fixed values that remembers what it was asked to do."""
-
     def __init__(self) -> None:
         self.lock_calls = 0
 
@@ -44,8 +38,6 @@ class FakeSystem:
 
 
 class Phone:
-    """What a test gets to work with: the phone's channel, its raw transport and the fake PC."""
-
     def __init__(
         self, channel: MessageChannel, transport: InMemoryTransport, system: FakeSystem
     ) -> None:

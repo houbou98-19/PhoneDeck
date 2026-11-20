@@ -1,4 +1,4 @@
-"""Tests for phonedeck.core.pairing_page."""
+"""Tests for the pairing page."""
 
 from phonedeck.core.pairing import Pairing
 from phonedeck.core.pairing_page import REFRESH_SECONDS, render_pairing_page

@@ -1,8 +1,4 @@
-"""Tests for phonedeck.core.terminal_qr.
-
-The strongest test reads the drawing back: it turns the text into squares again and checks that
-they are exactly the QR code, so what is on the screen really is the link.
-"""
+"""Tests for the terminal QR. The strongest test reads the drawing back and compares it."""
 
 import re
 

@@ -1,8 +1,4 @@
-"""Tests for phonedeck.core.channel.MessageChannel.
-
-Two channels are connected through an in-memory transport pair, so no hardware is needed.
-Tests that send "raw" bytes use the transport directly, to act like a misbehaving other end.
-"""
+"""Tests for MessageChannel. Tests that send "raw" bytes act like a misbehaving other end."""
 
 import asyncio
 from collections.abc import Callable, Coroutine
@@ -18,7 +14,7 @@ from phonedeck.transport.memory import InMemoryTransport
 
 
 def run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
-    """Run an async test scenario. It fails after 2 seconds instead of hanging forever."""
+    """Fail after 2 seconds instead of hanging forever."""
     asyncio.run(asyncio.wait_for(scenario(), timeout=2))
 
 

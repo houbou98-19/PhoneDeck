@@ -1,7 +1,4 @@
-"""Tests for phonedeck.core.identity.load_or_create_service_uuid.
-
-Every test uses its own temporary folder (the tmp_path fixture), so nothing real is touched.
-"""
+"""Tests for load_or_create_service_uuid. Each test uses its own tmp_path."""
 
 import uuid
 from pathlib import Path

@@ -1,7 +1,6 @@
-"""Tests for phonedeck.core.server.serve running over a SecureChannel.
+"""Tests for serve over a SecureChannel: nothing is handled unless the phone has the key.
 
-The point of these tests: nothing is ever handled unless the phone has proven that it has the
-pairing key. In particular, a lock command that is not authentic must never lock the computer.
+In particular, a lock command that is not authentic must never lock the computer.
 """
 
 import asyncio
@@ -23,8 +22,6 @@ KEY = bytes(range(0x00, 0x10))
 
 
 class FakeSystem:
-    """A computer with fixed values that remembers what it was asked to do."""
-
     def __init__(self) -> None:
         self.lock_calls = 0
 

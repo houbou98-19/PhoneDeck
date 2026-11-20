@@ -1,8 +1,4 @@
-"""Tests for phonedeck.transport.memory.InMemoryTransport.
-
-The async tests use asyncio.run() so no extra test plugin is needed. Tests that could hang
-if the code is wrong use asyncio.wait_for(...), so they fail after 1 second instead.
-"""
+"""Tests for InMemoryTransport. Tests that could hang use wait_for, so they fail after 1 second."""
 
 import asyncio
 from collections.abc import Callable, Coroutine

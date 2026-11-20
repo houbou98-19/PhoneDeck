@@ -1,4 +1,4 @@
-"""Tests for phonedeck.core.pairing. A fake clock moves time without waiting."""
+"""Tests for Pairing. A fake clock moves time without waiting."""
 
 import pytest
 

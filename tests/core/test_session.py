@@ -1,7 +1,4 @@
-"""Tests for phonedeck.core.session.pair_and_serve.
-
-These use real (short) times: a pairing that lasts a fraction of a second.
-"""
+"""Tests for pair_and_serve. They use real but very short pairing times."""
 
 import asyncio
 from collections.abc import Callable, Coroutine
@@ -51,8 +48,6 @@ def run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
 
 
 class Setup:
-    """A computer side (with a fresh Pairing) and a phone side, connected in memory."""
-
     def __init__(self, lifetime: float, phone_key: bytes | None = None) -> None:
         self.pairing = Pairing(lifetime=lifetime)
         self.system = FakeSystem()

@@ -1,7 +1,6 @@
-"""Tests for phonedeck.platform.windows.
+"""Tests for the Windows platform code. Calls into Windows are replaced, so nothing is locked.
 
-The three functions that call Windows are replaced, so these tests never lock the computer.
-The last section calls the real Windows functions (read-only) and runs on Windows only.
+The last section calls the real, read-only functions and runs on Windows only.
 """
 
 import asyncio

@@ -1,9 +1,4 @@
-"""Tests for phonedeck.transport.ble.BleTransport.
-
-The operating system is replaced by FakePeripheral, so no Bluetooth hardware is needed.
-The "phone" is played by the test, through FakePeripheral.phone_writes() and
-FakePeripheral.phone_disconnects().
-"""
+"""Tests for BleTransport. FakePeripheral replaces the OS; the test plays the phone."""
 
 import asyncio
 from collections.abc import Callable, Coroutine
@@ -19,13 +14,11 @@ from phonedeck.transport.ble import BleTransport
 
 
 def run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
-    """Run an async test scenario. It fails after 2 seconds instead of hanging forever."""
+    """Fail after 2 seconds instead of hanging forever."""
     asyncio.run(asyncio.wait_for(scenario(), timeout=2))
 
 
 class FakePeripheral:
-    """A pretend BLE stack. It records notifications and lets the test act as the phone."""
-
     def __init__(self) -> None:
         self.notified: list[bytes] = []
         self.stop_calls = 0

@@ -1,11 +1,4 @@
-"""Tests for the wire framing in phonedeck.protocol.frame.
-
-Wire format (all integers big-endian):
-
-    | version (1 byte) | message_type (1 byte) | length (2 bytes) | payload (length bytes) |
-
-Frame is expected to have the fields: version: int, message_type: int, payload: bytes.
-"""
+"""Tests for the wire framing. The format is in docs/protocol.md."""
 
 import pytest
 

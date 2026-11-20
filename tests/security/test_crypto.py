@@ -1,7 +1,5 @@
-"""Tests for phonedeck.security.crypto.
-
-The known values were made with a reference calculation using the `cryptography` library. They
-are also the test vectors for the JavaScript version of the same functions (WebCrypto).
+"""Tests for crypto. The known values come from the `cryptography` library and double as
+test vectors for the JavaScript (WebCrypto) version.
 """
 
 import pytest

@@ -1,12 +1,4 @@
-"""Tests for phonedeck.protocol.message.
-
-A Message lives inside a Frame:
-
-    Frame.message_type = MessageKind (1 byte)
-    Frame.payload      = | request_id (2 bytes, big-endian) | body (the rest) |
-
-Message is expected to have the fields: kind: MessageKind, request_id: int, body: bytes.
-"""
+"""Tests for Message, which lives inside a Frame. The format is in docs/protocol.md."""
 
 import pytest
 

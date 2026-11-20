@@ -1,7 +1,6 @@
-"""Tests for phonedeck.platform.winrt_peripheral.WinRtPeripheral.
+"""Tests for WinRtPeripheral, only what works without an adapter.
 
-Only what can be checked without a Bluetooth adapter. Advertising, writes and notifications
-need real hardware: try them with a phone, or with a BLE scanner such as nRF Connect.
+Advertising, writes and notifications need real hardware (a phone, or nRF Connect).
 """
 
 import sys

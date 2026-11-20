@@ -1,9 +1,8 @@
-"""Tests for phonedeck.core.secure_channel.SecureChannel.
+"""Tests for SecureChannel.
 
-The phone (CLIENT) and the computer (SERVER) are two SecureChannels connected by an in-memory
-transport. TapTransport sits in between and plays the attacker: it records every packet, and it
-can change, repeat or drop the next one. The raw channels and transports are also available, so
-a test can send things that a SecureChannel would never send.
+TapTransport sits between the phone (CLIENT) and the computer (SERVER) and plays the attacker:
+it can change, repeat or drop the next packet. The raw channels let a test send what a
+SecureChannel never would.
 """
 
 import asyncio
@@ -39,12 +38,12 @@ WRONG_KEY = bytes(range(0x10, 0x20))
 
 
 def run(scenario: Callable[[], Coroutine[Any, Any, None]]) -> None:
-    """Run an async test scenario. It fails after 2 seconds instead of hanging forever."""
+    """Fail after 2 seconds instead of hanging forever."""
     asyncio.run(asyncio.wait_for(scenario(), timeout=2))
 
 
 class TapTransport:
-    """Wraps a transport. Records every sent packet, and can rewrite the next one."""
+    """Records every sent packet, and can rewrite the next one."""
 
     def __init__(self, inner: InMemoryTransport) -> None:
         self._inner = inner
@@ -52,7 +51,6 @@ class TapTransport:
         self._rewrite: Callable[[bytes], list[bytes]] | None = None
 
     def rewrite_next(self, rewrite: Callable[[bytes], list[bytes]]) -> None:
-        """The next packet is replaced by the packets that `rewrite` returns."""
         self._rewrite = rewrite
 
     @property
@@ -74,8 +72,6 @@ class TapTransport:
 
 @dataclass
 class Pair:
-    """Both ends of one link. client_raw and server_raw send straight into the other end."""
-
     client: SecureChannel
     server: SecureChannel
     client_channel: MessageChannel  # the plain channel under the client
@@ -103,7 +99,6 @@ def make_pair(client_key: bytes = KEY, server_key: bytes = KEY) -> Pair:
 
 
 async def connected() -> Pair:
-    """A pair that has completed the handshake."""
     pair = make_pair()
     await asyncio.gather(pair.client.handshake(), pair.server.handshake())
     return pair
@@ -363,7 +358,7 @@ def test_the_client_refuses_a_wrong_reply_from_the_server() -> None:
 
 
 async def assert_closed_after_refusing(receiver: SecureChannel, other: SecureChannel) -> None:
-    """The receiver refuses the message, and from then on both sides see a closed channel."""
+    """The receiver refuses the message, then both sides see a closed channel."""
     with pytest.raises(SecureChannelError):
         await receiver.receive()
     with pytest.raises(TransportClosedError):

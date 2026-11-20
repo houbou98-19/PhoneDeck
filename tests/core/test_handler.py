@@ -1,7 +1,4 @@
-"""Tests for phonedeck.core.handler.Handler.
-
-The computer is replaced by FakeSystem, so no real CPU is read and nothing is ever locked.
-"""
+"""Tests for Handler. FakeSystem stands in for the computer, so nothing is ever locked."""
 
 import asyncio
 
@@ -13,8 +10,6 @@ from phonedeck.protocol.message import Message, MessageError, MessageKind
 
 
 class FakeSystem:
-    """A computer that reports fixed values and remembers what it was asked to do."""
-
     def __init__(
         self,
         cpu: int = 37,
